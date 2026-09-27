@@ -1,0 +1,19 @@
+# Never commit tenancy config, local overrides, journals, or credentials
+config/*.json
+!config/vault-ops.example.json
+local.json
+*.jsonl
+Wallet_*/
+*.zip
+*.pem
+*.sso
+*.p12
+*.jks
+.oci/
+
+__pycache__/
+*.pyc
+.DS_Store
+
+# ggshield local cache (contains local paths)
+.cache_ggshield

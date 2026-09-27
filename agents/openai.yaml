@@ -1,0 +1,4 @@
+interface:
+  display_name: "OCI Vault Operations"
+  short_description: "Inventory, classify, verify, and safely rotate OCI Vault secrets"
+  default_prompt: "Use $oci-vault-operations to open the Vault menu."

@@ -1,0 +1,38 @@
+{
+  "_comment": "Copy to ~/.config/oci-vault-ops/config.json and replace every placeholder. See references/configuration.md.",
+  "python": "/path/to/python-with-oci-and-oracledb",
+  "oci": {
+    "profile": "YOUR_OCI_PROFILE",
+    "region": "us-ashburn-1"
+  },
+  "tag_key": "rotationTag",
+  "password_policy": {
+    "length": 20,
+    "min_upper": 2,
+    "min_lower": 2,
+    "min_digits": 2,
+    "min_special": 1,
+    "special_chars": "#_-"
+  },
+  "audit_journal": "~/.config/oci-vault-ops/journal.jsonl",
+  "audit_actor": "your-name",
+  "environments": {
+    "stage": {
+      "secret_compartments": ["ocid1.compartment.oc1..replace-me"],
+      "vault_only_secrets": ["internal-webhook-token"],
+      "databases": {
+        "appdb": {
+          "ocid": "ocid1.autonomousdatabase.oc1.iad.replace-me",
+          "connection": "public",
+          "service_alias": "appdb_low",
+          "wallet_dir": "~/wallets/Wallet_appdb",
+          "wallet_password_secret": "appdb-wallet-pwd",
+          "admin_secret": "appdb-admin-pwd",
+          "user_secrets": {
+            "appdb-app_user-pwd": "APP_USER"
+          }
+        }
+      }
+    }
+  }
+}
