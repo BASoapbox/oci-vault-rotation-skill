@@ -137,8 +137,19 @@ class StaticSafetyTests(unittest.TestCase):
         body = source[source.index("def adb_login"):source.index("def main")]
         self.assertLess(body.index("args.confirm != phrase"), body.index("read_secret_value"))
 
+    def test_consumer_sync_reads_values_only_after_confirmation(self):
+        source = (SCRIPTS / "verify.py").read_text()
+        body = source[source.index("def consumer_sync"):source.index("def main")]
+        self.assertLess(body.index("args.confirm != phrase"), body.index("read_secret_value"))
+
+    def test_handlers_never_print(self):
+        for path in (SCRIPTS / "handlers").glob("*.py"):
+            with self.subTest(handler=path.name):
+                self.assertNotIn("print(", path.read_text())
+
     def test_no_exception_text_is_emitted_by_executors(self):
-        for name in ("rotate_adb_user.py", "rotate_adb_admin.py", "rotate_vault_only.py", "verify.py"):
+        for name in ("rotate_adb_user.py", "rotate_adb_admin.py", "rotate_vault_only.py", "rotate_secret.py",
+                     "import_secret.py", "verify.py"):
             with self.subTest(script=name):
                 source = (SCRIPTS / name).read_text()
                 # str(exc) is allowed only for OpsError, whose messages are authored in this codebase.

@@ -18,8 +18,12 @@
   "audit_actor": "your-name",
   "environments": {
     "stage": {
-      "secret_compartments": ["ocid1.compartment.oc1..replace-me"],
-      "vault_only_secrets": ["internal-webhook-token"],
+      "secret_compartments": [
+        "ocid1.compartment.oc1..replace-me"
+      ],
+      "vault_only_secrets": [
+        "internal-webhook-token"
+      ],
       "databases": {
         "appdb": {
           "ocid": "ocid1.autonomousdatabase.oc1.iad.replace-me",
@@ -32,7 +36,60 @@
             "appdb-app_user-pwd": "APP_USER"
           }
         }
+      },
+      "secret_bindings": {
+        "app-db-pwd": {
+          "value": {
+            "format": "password"
+          },
+          "handlers": {
+            "PG": {
+              "host": "app-host",
+              "container": "app-db",
+              "role": "app_user",
+              "database": "app"
+            },
+            "COMPOSE": {
+              "host": "app-host",
+              "project_dir": "/srv/app",
+              "env_var": "POSTGRES_PASSWORD",
+              "services": [
+                "app-db",
+                "api"
+              ],
+              "url_embedded": true,
+              "container_env": [
+                {
+                  "service": "api",
+                  "var": "DATABASE_URL",
+                  "match": "contains"
+                }
+              ]
+            }
+          }
+        },
+        "app-jwt-signing-key": {
+          "value": {
+            "format": "hex",
+            "bytes": 32
+          },
+          "handlers": {
+            "COMPOSE": {
+              "host": "app-host",
+              "project_dir": "/srv/app",
+              "env_var": "JWT_SECRET_KEY",
+              "services": [
+                "api"
+              ]
+            }
+          }
+        }
       }
+    }
+  },
+  "hosts": {
+    "app-host": {
+      "ssh": "ubuntu@app-host.example"
     }
   }
 }

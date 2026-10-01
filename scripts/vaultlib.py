@@ -39,7 +39,7 @@ LEGACY_TAG_KEYS = ("rotationClass",)
 TAG_PATTERN = re.compile(r"^(P1|P2(?::[A-Z][A-Z0-9_]{0,29})*|EXEMPT|MANUAL)$")
 # Downstream handlers this skill can execute. P2 rotation is refused unless
 # every handler named in the tag is here, so a rotation never runs half its targets.
-IMPLEMENTED_HANDLERS = frozenset({"ADB"})
+IMPLEMENTED_HANDLERS = frozenset({"ADB", "PG", "COMPOSE"})
 DEFAULT_CONFIG = "~/.config/oci-vault-ops/config.json"
 DEFAULT_LOCAL_OVERRIDE = "~/.config/oci-vault-ops/local.json"
 SAFE_DB_USER = re.compile(r"^[A-Z][A-Z0-9_$#]{0,127}$")
@@ -189,6 +189,12 @@ def vault_only_secrets(cfg: dict[str, Any], env: str) -> list[str]:
     return list(environment(cfg, env).get("vault_only_secrets") or [])
 
 
+def secret_binding(cfg: dict[str, Any], env: str, secret: str) -> dict[str, Any] | None:
+    """Config half of the gate for P2 handlers other than ADB:
+    environments.<env>.secret_bindings.<secret> = {"value": {...}, "handlers": {"PG": {...}, ...}}"""
+    return (environment(cfg, env).get("secret_bindings") or {}).get(secret)
+
+
 # ---------------------------------------------------------------------------
 # Vault lookups (metadata only)
 # ---------------------------------------------------------------------------
@@ -265,7 +271,7 @@ def read_secret_value(cfg: dict[str, Any], env: str, secret_id: str, version_num
     return base64.b64decode(bundle.secret_bundle_content.content).decode("utf-8")
 
 
-def password_from_policy(cfg: dict[str, Any], username: str) -> str:
+def password_from_policy(cfg: dict[str, Any], username: str, exclude: str = "") -> str:
     """Generate a password from the configured policy using the OS CSPRNG.
 
     Ambiguous characters (O/0, I/l/1) are removed. The special-character set
@@ -277,14 +283,18 @@ def password_from_policy(cfg: dict[str, Any], username: str) -> str:
     special = str(policy.get("special_chars", "#_-"))
     if '"' in special or "'" in special or "\\" in special:
         raise OpsError("password_policy.special_chars must not contain quotes or backslashes")
+    drop = "".join(sorted(set(exclude)))
     classes = (
-        string.ascii_uppercase.translate(str.maketrans("", "", "OI")),
-        string.ascii_lowercase.translate(str.maketrans("", "", "ol")),
-        string.digits.translate(str.maketrans("", "", "01")),
-        special,
+        string.ascii_uppercase.translate(str.maketrans("", "", "OI" + drop)),
+        string.ascii_lowercase.translate(str.maketrans("", "", "ol" + drop)),
+        string.digits.translate(str.maketrans("", "", "01" + drop)),
+        special.translate(str.maketrans("", "", drop)),
     )
     minimums = (int(policy.get("min_upper", 2)), int(policy.get("min_lower", 2)),
                 int(policy.get("min_digits", 2)), int(policy.get("min_special", 1)))
+    if any(count and not charset for charset, count in zip(classes, minimums)):
+        raise OpsError("After excluding characters the handlers cannot accept, a required character class is empty; "
+                       "adjust password_policy.special_chars or min_special")
     if length < sum(minimums):
         raise OpsError("password_policy is inconsistent: length is below the required character minimums")
     alphabet = "".join(classes)
@@ -325,6 +335,21 @@ def wait_for_active(client: oci.vault.VaultsClient, secret_id: str, timeout_seco
         if time.monotonic() >= deadline:
             raise OpsError("Timed out waiting for the secret to become ACTIVE")
         time.sleep(2)
+
+
+def generate_value(cfg: dict[str, Any], spec: dict[str, Any] | None, exclude: str = "", username: str = "") -> str:
+    """Generate a new value for a secret binding's value spec.
+
+    {"format": "password"} (default) uses password_policy minus excluded characters.
+    {"format": "hex", "bytes": 32} gives 64 hex characters, e.g. for signing keys.
+    """
+    spec = spec or {}
+    fmt = spec.get("format", "password")
+    if fmt == "hex":
+        return csprng.token_hex(int(spec.get("bytes", 32)))
+    if fmt == "password":
+        return password_from_policy(cfg, username, exclude)
+    raise OpsError(f"Unknown value format '{fmt}'")
 
 
 def stage_pending(client: oci.vault.VaultsClient, secret_id: str, value: str) -> int:

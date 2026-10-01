@@ -40,6 +40,13 @@ def warnings_for(cfg, env: str, secret: str, tag: str) -> list[str]:
         warnings.append("P2 without a handler cannot rotate; name one, e.g. P2:ADB")
     if missing:
         warnings.append(f"No handler yet for {', '.join(missing)}; rotation stays blocked until one exists")
+    other = [h for h in handlers if h != "ADB" and h in v.IMPLEMENTED_HANDLERS]
+    bound = (v.secret_binding(cfg, env, secret) or {}).get("handlers") or {}
+    unbound = [h for h in other if h not in bound]
+    if unbound:
+        warnings.append(f"{', '.join(unbound)} handler needs a binding in environments.<env>.secret_bindings before rotation")
+    if "ADB" in handlers and other:
+        warnings.append("ADB combined with other handlers is not supported yet; rotation stays blocked")
     if "ADB" in handlers and not mapped:
         warnings.append("ADB handler requires the secret to be mapped in config (admin_secret or user_secrets)")
     if tag == "P1" and secret not in v.vault_only_secrets(cfg, env):

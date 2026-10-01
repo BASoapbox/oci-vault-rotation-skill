@@ -25,10 +25,15 @@ took. Implemented today:
 | Handler | Runner | Applies and verifies by |
 |---|---|---|
 | `ADB` | `rotate_adb_user.py`, `rotate_adb_admin.py` | `ALTER USER`, then a fresh login |
+| `PG` | `rotate_secret.py` | `ALTER ROLE` in a Postgres container, then a real password login |
+| `COMPOSE` | `rotate_secret.py` | env-file update, recreate named services, verify they carry it |
 
-A tag may name handlers that do not exist yet, such as `P2:JNR_APP` or
-`P2:ADB:JWT`. Tagging it records the intent; **rotation stays blocked** until
-every named handler exists. The skill never runs some of a secret's handlers and
+See `references/handlers.md` for bindings.
+
+A tag may name handlers that do not exist yet, such as `P2:MDB:FILE`, or a
+combination not supported yet, such as `P2:ADB:COMPOSE`. Tagging it records the
+intent; **rotation stays blocked** until every named handler exists and can run
+together. The skill never runs some of a secret's handlers and
 skips the rest, because a half-rotated secret is worse than an unrotated one.
 
 ## Choosing a tag
@@ -38,9 +43,9 @@ Ask what has to change when the value changes.
 - **Nothing else** → `P1`. Suits values you generate yourself: a shared random
   token, an internal password only Vault hands out.
 - **A database account** → `P2:ADB`, once mapped in config.
-- **An application that reads it** → `P2:<APP>`, naming a handler for that
-  application. The handler updates, restarts or verifies the application.
-- **A database and an application** → `P2:ADB:<APP>`.
+- **An application that reads it** → `P2:<HANDLER>` for the system that holds
+  the copy, e.g. `P2:COMPOSE` for a variable in a Docker Compose env file.
+- **A database and an application** → both, in order, e.g. `P2:PG:COMPOSE`.
 - **Its value comes from someone else** (an API key a provider issues, SMTP
   credentials a cloud service generates) → `MANUAL`, unless a handler can obtain
   the new value from that provider.

@@ -56,8 +56,14 @@ Each secret carries a tag in its metadata (`rotationTag`):
 | `EXEMPT` | Does not require rotation | Nothing |
 | `MANUAL` | Rotates, but this skill cannot perform it | A person |
 
-Implemented handlers: **`ADB`** (Autonomous Database users and `ADMIN`).
-See [references/classification.md](references/classification.md).
+Implemented handlers:
+
+- **`ADB`**: Autonomous Database users and `ADMIN`
+- **`PG`**: a PostgreSQL role, for Postgres running in Docker
+- **`COMPOSE`**: a variable in a Docker Compose env file, plus recreating the services that read it
+
+Handlers chain in tag order: `P2:PG:COMPOSE` changes the database password, then
+the app's env file. See [references/handlers.md](references/handlers.md).
 
 ## Tools
 
@@ -70,13 +76,16 @@ See [references/classification.md](references/classification.md).
 | `rotate_vault_only.py` | `P1` rotation | After confirmation |
 | `rotate_adb_user.py` | `P2:ADB` rotation of a database user | After confirmation |
 | `rotate_adb_admin.py` | `P2:ADB` rotation of `ADMIN` | After confirmation |
-| `verify.py` | Vault state, stranded `PENDING` versions, login proof | No |
+| `rotate_secret.py` | `P2` rotation through `PG` / `COMPOSE` handlers | After confirmation |
+| `import_secret.py` | Bring a value a system already uses into Vault | Vault, after confirmation |
+| `verify.py` | Vault state, stranded `PENDING` versions, login proof, consumer sync | No |
 | `audit_journal.py` | Append-only redacted operations log | Local file only |
 
 ## Requirements
 
 - Python 3.10+ with `oci` and `oracledb` (`pip install -r requirements.txt`)
 - An OCI CLI config profile with permission to manage secrets in the vault
+- For `PG` / `COMPOSE`: SSH access to the host, Docker Compose v2, and `python3` on the host
 - A downloaded wallet for each Autonomous Database, and its wallet password
   stored in Vault if the wallet key is encrypted (it is by default)
 
@@ -128,6 +137,7 @@ then interrupt a rotation on purpose and recover it, before tagging anything rea
 - [references/rotation-lifecycle.md](references/rotation-lifecycle.md): the transaction and recovery
 - [references/admin-rotation.md](references/admin-rotation.md): `ADMIN`-specific rules
 - [references/classification.md](references/classification.md): the tag scheme
+- [references/handlers.md](references/handlers.md): `PG`, `COMPOSE`, bindings, adding a handler
 - [references/configuration.md](references/configuration.md): every config key
 - [references/audit-journal.md](references/audit-journal.md): the operations log
 

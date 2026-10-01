@@ -31,6 +31,8 @@ are listed under `_unmapped_secrets`.
 | `environments.<env>.region` | Optional per-environment region |
 | `environments.<env>.secret_compartments` | Compartment OCIDs to search for secrets |
 | `environments.<env>.vault_ids` | Optional: restrict to these vaults |
+| `hosts.<name>.ssh` | ssh alias or `user@host` for handlers that act on a server |
+| `environments.<env>.secret_bindings` | Per-secret value format and handler bindings; see `references/handlers.md` |
 | `environments.<env>.vault_only_secrets` | Secret names allowed to rotate as `P1` (the config half of the two gates) |
 | `environments.<env>.databases.<key>` | One entry per Autonomous Database |
 
