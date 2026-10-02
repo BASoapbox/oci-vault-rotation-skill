@@ -1,6 +1,6 @@
 ---
 name: oci-vault-operations
-description: Safely inventory, tag, verify, and rotate OCI Vault secrets, including Vault-only (P1) rotation, confirmation-gated Autonomous Database user and ADMIN password rotation (P2:ADB), and rotation through downstream handlers such as Postgres in Docker and Docker Compose env files (P2:PG, P2:COMPOSE), keeping Vault and every consumer in sync. Use when the user asks for a Vault inventory, Vault status or menu, to show or audit secrets, to tag or classify secrets for rotation, to rotate a database password stored in OCI Vault, to verify a secret still authenticates, or to find and recover incomplete rotations. Defaults to read-only reporting and requires an exact confirmation phrase before any change.
+description: Safely inventory, tag, verify, and rotate OCI Vault secrets, including Vault-only (P1) rotation, confirmation-gated Autonomous Database user and ADMIN password rotation (P2:ADB), and rotation through downstream handlers such as Postgres and MongoDB in Docker, Docker Compose env files, and credential files (P2:PG, P2:MDB, P2:COMPOSE, P2:FILE), keeping Vault and every consumer in sync. Use when the user asks for a Vault inventory, Vault status or menu, to show or audit secrets, to tag or classify secrets for rotation, to rotate a database password stored in OCI Vault, to verify a secret still authenticates, or to find and recover incomplete rotations. Defaults to read-only reporting and requires an exact confirmation phrase before any change.
 ---
 
 # OCI Vault Operations
@@ -77,7 +77,7 @@ Normal language should route here; users should not need to remember commands.
   `vault_only_secrets`. Never edit the config to get past a failed gate without
   the user asking for that specific change.
 - **No partial rotations.** A tag naming a handler that does not exist yet (e.g.
-  `P2:MDB:FILE`), or a combination not supported yet (`P2:ADB:COMPOSE`), blocks
+  `P2:REDIS`), or a combination not supported yet (`P2:ADB:COMPOSE`), blocks
   rotation. Do not rotate only the parts the
   skill can handle; report the missing handler instead.
 - **Never tag an application's secret `P1`.** If anything reads a copy of the
@@ -91,7 +91,7 @@ Normal language should route here; users should not need to remember commands.
 
 Read `references/rotation-lifecycle.md` before proposing or executing a rotation.
 
-**Downstream handlers (`P2:PG`, `P2:COMPOSE`, ...):** `scripts/rotate_secret.py`.
+**Downstream handlers (`P2:PG`, `P2:MDB`, `P2:COMPOSE`, `P2:FILE`):** `scripts/rotate_secret.py`.
 Read `references/handlers.md` first. It refuses unless every consumer already
 holds Vault CURRENT; if not, the fix is `import_secret.py`, never an edit to the
 consumer. It connects to the configured hosts over SSH and recreates the named

@@ -27,10 +27,12 @@ took. Implemented today:
 | `ADB` | `rotate_adb_user.py`, `rotate_adb_admin.py` | `ALTER USER`, then a fresh login |
 | `PG` | `rotate_secret.py` | `ALTER ROLE` in a Postgres container, then a real password login |
 | `COMPOSE` | `rotate_secret.py` | env-file update, recreate named services, verify they carry it |
+| `MDB` | `rotate_secret.py` | `changeUserPassword` as the Mongo administrator, then a real login |
+| `FILE` | `rotate_secret.py` | atomic rewrite of each file holding the value, then optional checks |
 
 See `references/handlers.md` for bindings.
 
-A tag may name handlers that do not exist yet, such as `P2:MDB:FILE`, or a
+A tag may name handlers that do not exist yet, such as `P2:REDIS`, or a
 combination not supported yet, such as `P2:ADB:COMPOSE`. Tagging it records the
 intent; **rotation stays blocked** until every named handler exists and can run
 together. The skill never runs some of a secret's handlers and
@@ -45,7 +47,8 @@ Ask what has to change when the value changes.
 - **A database account** → `P2:ADB`, once mapped in config.
 - **An application that reads it** → `P2:<HANDLER>` for the system that holds
   the copy, e.g. `P2:COMPOSE` for a variable in a Docker Compose env file.
-- **A database and an application** → both, in order, e.g. `P2:PG:COMPOSE`.
+- **A database and an application** → both, in order, e.g. `P2:PG:COMPOSE`, or
+  `P2:MDB:FILE` when clients read the password from a file.
 - **Its value comes from someone else** (an API key a provider issues, SMTP
   credentials a cloud service generates) → `MANUAL`, unless a handler can obtain
   the new value from that provider.

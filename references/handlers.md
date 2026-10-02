@@ -9,8 +9,10 @@ the system accepts it. `P2` tags list handlers in the order they run:
 | `ADB` | Autonomous Database user / `ADMIN` | `rotate_adb_user.py`, `rotate_adb_admin.py` |
 | `PG` | PostgreSQL role, Postgres in a Docker container | `rotate_secret.py` |
 | `COMPOSE` | Variable in a Docker Compose env file, and the services reading it | `rotate_secret.py` |
+| `MDB` | MongoDB user, MongoDB in a Docker container | `rotate_secret.py` |
+| `FILE` | Value inside one or more files on a host | `rotate_secret.py` |
 
-Tags may name handlers that do not exist yet (for example `P2:MDB:FILE`);
+Tags may name handlers that do not exist yet (for example `P2:REDIS`);
 rotation stays blocked until every one exists. `ADB` does not combine with the
 others yet.
 
@@ -57,6 +59,33 @@ Forbids `$ # " ' \` backtick and whitespace; `url_embedded` also forbids
 
 Only the named services are recreated. `--no-deps` keeps Compose from touching
 anything else in the project, which matters when unrelated sites share it.
+
+### MDB
+`host`, `container`, `user`, `auth_db` (the user's authSource), `admin_secret`,
+optional `admin_user` (default `admin`), `admin_auth_db` (default `admin`), `port`
+(default 27017). An ordinary user usually cannot change its own password
+(`readWrite` lacks `changeOwnPassword`), so the handler authenticates as the
+administrator, whose password it reads from `admin_secret`'s Vault `CURRENT` at
+apply time only, then runs `changeUserPassword`. `admin_secret` may be the
+secret being rotated: rotating the administrator itself works because `CURRENT`
+stays the old password until the rotation promotes. Proves the new value with a
+real login as the user. Preflight checks that the server refuses
+unauthenticated commands and rejects a random wrong password, and that
+`admin_secret` exists (metadata only). Scripts run as `mongosh --nodb
+/dev/stdin` with values as JSON string literals on stdin; only a status token is
+read back.
+
+### FILE
+`host`, `files` (a list of `{path, format, key}`), optional `verify_commands`
+(argv lists, run with empty stdin, must exit 0) and `verify_timeout`. Formats:
+`whole` (the file is the value; a trailing newline is kept as it was), `env`
+(`KEY=value`), `yaml` (`key: value`, unquoted). Each file is rewritten
+atomically: temp file in the same directory, then rename, mode and owner kept.
+FILE restarts nothing, so it suits values read when used. A container that
+mounts the **directory** sees the new file; one that mounts the single file
+keeps the old inode, so mount directories. Forbids, per format used: newline;
+for `env`, `$ # " ' \` backtick and whitespace; for `yaml`, also
+`: { } [ ] , & * ! | > % @`.
 
 ## Before the first rotation: Vault must hold the live value
 

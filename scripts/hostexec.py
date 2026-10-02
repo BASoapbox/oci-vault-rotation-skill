@@ -126,6 +126,69 @@ if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
 sys.stdout.write(val)
 '''
 
+# FILE handler helpers. argv: path, format ("whole" | "env" | "yaml"), key ("" for whole).
+# The value arrives on stdin. env lines are KEY=value; yaml lines are `key: value`
+# (indentation kept). One matching line is required: zero or several is an error.
+
+FILE_COMPARE = r'''
+import hmac, sys
+path, fmt, key = sys.argv[1], sys.argv[2], sys.argv[3]
+want = sys.stdin.read()
+try:
+    text = open(path).read()
+except FileNotFoundError:
+    print("NO_FILE"); sys.exit(0)
+except PermissionError:
+    print("NO_ACCESS"); sys.exit(0)
+if fmt == "whole":
+    val = text[:-1] if text.endswith("\n") else text
+else:
+    sep = "=" if fmt == "env" else ":"
+    vals = [l.split(sep, 1)[1].strip() for l in text.splitlines() if l.strip().startswith(key + sep)]
+    if len(vals) != 1:
+        print("MISSING" if not vals else "DUPLICATE"); sys.exit(0)
+    val = vals[0]
+    if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
+        val = val[1:-1]
+print("MATCH" if hmac.compare_digest(val.encode(), want.encode()) else "DIFFERENT")
+'''
+
+FILE_WRITE = r'''
+import os, sys, tempfile
+path, fmt, key = sys.argv[1], sys.argv[2], sys.argv[3]
+val = sys.stdin.read()
+text = open(path).read()
+if fmt == "whole":
+    new = val + ("\n" if text.endswith("\n") else "")
+else:
+    sep = "=" if fmt == "env" else ":"
+    lines = text.splitlines(keepends=True)
+    idx = [i for i, l in enumerate(lines) if l.strip().startswith(key + sep)]
+    if len(idx) != 1:
+        print("KEY_COUNT_%d" % len(idx)); sys.exit(3)
+    line = lines[idx[0]]
+    nl = "\n" if line.endswith("\n") else ""
+    indent = line[:len(line) - len(line.lstrip())]
+    lines[idx[0]] = indent + key + ("=" + val if fmt == "env" else ": " + val) + nl
+    new = "".join(lines)
+st = os.stat(path)
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(path)), prefix=".vaultops.")
+try:
+    with os.fdopen(fd, "w") as fh:
+        fh.write(new)
+    os.chmod(tmp, st.st_mode & 0o7777)
+    try:
+        os.chown(tmp, st.st_uid, st.st_gid)
+    except PermissionError:
+        pass
+    os.replace(tmp, path)
+except BaseException:
+    if os.path.exists(tmp):
+        os.unlink(tmp)
+    raise
+print("WRITTEN")
+'''
+
 CONTAINER_ENV_COMPARE = r'''
 import hmac, json, subprocess, sys
 container, var, match = sys.argv[1], sys.argv[2], sys.argv[3]

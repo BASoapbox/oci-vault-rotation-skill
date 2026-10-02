@@ -39,7 +39,7 @@ LEGACY_TAG_KEYS = ("rotationClass",)
 TAG_PATTERN = re.compile(r"^(P1|P2(?::[A-Z][A-Z0-9_]{0,29})*|EXEMPT|MANUAL)$")
 # Downstream handlers this skill can execute. P2 rotation is refused unless
 # every handler named in the tag is here, so a rotation never runs half its targets.
-IMPLEMENTED_HANDLERS = frozenset({"ADB", "PG", "COMPOSE"})
+IMPLEMENTED_HANDLERS = frozenset({"ADB", "PG", "COMPOSE", "MDB", "FILE"})
 DEFAULT_CONFIG = "~/.config/oci-vault-ops/config.json"
 DEFAULT_LOCAL_OVERRIDE = "~/.config/oci-vault-ops/local.json"
 SAFE_DB_USER = re.compile(r"^[A-Z][A-Z0-9_$#]{0,127}$")

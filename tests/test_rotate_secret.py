@@ -69,7 +69,7 @@ class RouteTests(unittest.TestCase):
         self.assertIn("rotate_vault_only", self.blocked("P1"))
         self.assertIn("rotate_adb_user", self.blocked("P2:ADB"))
         self.assertIn("rotate_adb_user", self.blocked("P2:ADB:COMPOSE"))
-        self.assertIn("no handler yet for MDB", self.blocked("P2:MDB"))
+        self.assertIn("no handler yet for REDIS", self.blocked("P2:REDIS"))
         self.assertIn("EXEMPT", self.blocked("EXEMPT"))
 
     def test_every_handler_needs_a_binding(self):

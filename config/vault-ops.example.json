@@ -83,6 +83,65 @@
               ]
             }
           }
+        },
+        "app-mongo-pwd": {
+          "value": {
+            "format": "hex",
+            "bytes": 24
+          },
+          "handlers": {
+            "MDB": {
+              "host": "app-host",
+              "container": "app-mongo",
+              "user": "app_user",
+              "auth_db": "appdata",
+              "admin_secret": "app-mongo-admin-pwd"
+            },
+            "FILE": {
+              "host": "app-host",
+              "files": [
+                {
+                  "path": "/home/app/.config/app-mongo/app.pw",
+                  "format": "whole"
+                },
+                {
+                  "path": "/home/app/.config/app-mongo/dump.yaml",
+                  "format": "yaml",
+                  "key": "password"
+                }
+              ],
+              "verify_commands": [
+                [
+                  "/usr/local/bin/app-mongosh"
+                ]
+              ]
+            }
+          }
+        },
+        "app-mongo-admin-pwd": {
+          "value": {
+            "format": "hex",
+            "bytes": 24
+          },
+          "handlers": {
+            "MDB": {
+              "host": "app-host",
+              "container": "app-mongo",
+              "user": "admin",
+              "auth_db": "admin",
+              "admin_secret": "app-mongo-admin-pwd"
+            },
+            "FILE": {
+              "host": "app-host",
+              "files": [
+                {
+                  "path": "/home/app/.config/app-mongo/mongo.env",
+                  "format": "env",
+                  "key": "MONGO_INITDB_ROOT_PASSWORD"
+                }
+              ]
+            }
+          }
         }
       }
     }
